@@ -38,7 +38,10 @@ pub mod AMM {
             assert(token_amount > 0, 'deposit amount has to be > 0');
             assert(self.get_pool_balance(token_address) == 0, 'pool already exists');
 
+            let caller: ContractAddress = get_caller_address();
+
             self.pool_balance.write(token_address, token_amount);
+            self.account_balance.write((caller, token_address), token_amount);
         }
     }
 }
