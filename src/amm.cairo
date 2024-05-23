@@ -32,7 +32,9 @@ pub mod AMM {
             self.account_balance.read((account_address, token_address))
         }
 
-        fn create_pool(ref self: ContractState, token_address: ContractAddress, token_amount: u128) {
+        fn create_pool(
+            ref self: ContractState, token_address: ContractAddress, token_amount: u128
+        ) {
             assert(token_amount > 0, 'deposit amount has to be > 0');
             assert(self.get_pool_balance(token_address) == 0, 'pool already exists');
 
