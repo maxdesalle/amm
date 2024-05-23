@@ -2,11 +2,11 @@ use starknet::ContractAddress;
 
 #[starknet::interface]
 pub trait IAMM<TContractState> {
-    fn getPoolBalance(self: @TContractState, tokenAddress: ContractAddress) -> u128;
-    fn getAccountBalance(
-        self: @TContractState, accountAddress: ContractAddress, tokenAddress: ContractAddress
+    fn get_pool_balance(self: @TContractState, token_address: ContractAddress) -> u128;
+    fn get_account_balance(
+        self: @TContractState, account_address: ContractAddress, token_address: ContractAddress
     ) -> u128;
-    fn createPool(ref self: TContractState, tokenAddress: ContractAddress, tokenAmount: u128);
+    fn create_pool(ref self: TContractState, token_address: ContractAddress, token_amount: u128);
 }
 
 #[starknet::contract]
@@ -22,21 +22,21 @@ pub mod AMM {
 
     #[abi(embed_v0)]
     impl AMM of super::IAMM<ContractState> {
-        fn getPoolBalance(self: @ContractState, tokenAddress: ContractAddress) -> u128 {
-            self.pool_balance.read(tokenAddress)
+        fn get_pool_balance(self: @ContractState, token_address: ContractAddress) -> u128 {
+            self.pool_balance.read(token_address)
         }
 
-        fn getAccountBalance(
-            self: @ContractState, accountAddress: ContractAddress, tokenAddress: ContractAddress
+        fn get_account_balance(
+            self: @ContractState, account_address: ContractAddress, token_address: ContractAddress
         ) -> u128 {
-            self.account_balance.read((accountAddress, tokenAddress))
+            self.account_balance.read((account_address, token_address))
         }
 
-        fn createPool(ref self: ContractState, tokenAddress: ContractAddress, tokenAmount: u128) {
-            assert(tokenAmount > 0, 'deposit amount has to be > 0');
-            assert(self.getPoolBalance(tokenAddress) == 0, 'pool already exists');
+        fn create_pool(ref self: ContractState, token_address: ContractAddress, token_amount: u128) {
+            assert(token_amount > 0, 'deposit amount has to be > 0');
+            assert(self.get_pool_balance(token_address) == 0, 'pool already exists');
 
-            self.pool_balance.write(tokenAddress, tokenAmount);
+            self.pool_balance.write(token_address, token_amount);
         }
     }
 }

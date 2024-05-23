@@ -14,10 +14,10 @@ fn deploy_amm() -> (IAMMDispatcher, ContractAddress) {
 #[test]
 fn test_init_pool() {
     let (dispatcher, _) = deploy_amm();
-    let tokenAddress: ContractAddress = contract_address_const::<
+    let token_address: ContractAddress = contract_address_const::<
         0x06D98dC7ea54CF77eeD141F423f6007Dd61fbd2b6bD429Facdf5d4803353063f
     >();
 
-    let balance = dispatcher.getPoolBalance(tokenAddress);
+    let balance = dispatcher.get_pool_balance(token_address);
     assert(balance == 0, 'balance == 0');
 }
