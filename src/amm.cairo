@@ -7,6 +7,12 @@ pub trait IAMM<TContractState> {
         self: @TContractState, account_address: ContractAddress, token_address: ContractAddress
     ) -> u128;
     fn create_pool(ref self: TContractState, token_address: ContractAddress, token_amount: u128);
+    fn swap(
+        ref self: TContractState,
+        input_token_address: ContractAddress,
+        input_token_amount: u128,
+        output_token_address: ContractAddress
+    );
 }
 
 #[starknet::contract]
@@ -43,5 +49,14 @@ pub mod AMM {
             self.pool_balance.write(token_address, token_amount);
             self.account_balance.write((caller, token_address), token_amount);
         }
+
+        fn swap(
+            ref self: ContractState,
+            input_token_address: ContractAddress,
+            input_token_amount: u128,
+            output_token_address: ContractAddress
+        ) {
+					assert(self.get_pool_balance(output_token_address) > 0, 'empty output pool');
+					}
     }
 }
