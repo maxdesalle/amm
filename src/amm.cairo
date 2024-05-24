@@ -1,24 +1,43 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
+trait IERC20<TContractState> {
+    fn name(self: @TContractState) -> felt252;
+    fn symbol(self: @TContractState) -> felt252;
+    fn decimals(self: @TContractState) -> u8;
+    fn total_supply(self: @TContractState) -> u256;
+    fn balance_of(self: @TContractState, account: ContractAddress) -> u256;
+    fn allowance(self: @TContractState, owner: ContractAddress, spender: ContractAddress) -> u256;
+    fn transfer(ref self: TContractState, recipient: ContractAddress, amount: u256) -> bool;
+    fn transfer_from(
+        ref self: TContractState, sender: ContractAddress, recipient: ContractAddress, amount: u256
+    ) -> bool;
+    fn approve(ref self: TContractState, spender: ContractAddress, amount: u256) -> bool;
+}
+
+#[starknet::interface]
 pub trait IAMM<TContractState> {
     fn get_pool_balance(self: @TContractState, token_address: ContractAddress) -> u128;
     fn get_account_balance(
         self: @TContractState, account_address: ContractAddress, token_address: ContractAddress
     ) -> u128;
     fn create_pool(ref self: TContractState, token_address: ContractAddress, token_amount: u128);
-    fn swap(
-        ref self: TContractState,
-        input_token_address: ContractAddress,
-        input_token_amount: u128,
-        output_token_address: ContractAddress
-    );
+    // fn swap(
+    //     ref self: TContractState,
+    //     input_token_address: ContractAddress,
+    //     input_token_amount: u128,
+    //     output_token_address: ContractAddress
+    // );
 }
 
 #[starknet::contract]
 pub mod AMM {
+
+    use super::IERC20Dispatcher;
+		use super::IERC20DispatcherTrait;
     use starknet::ContractAddress;
     use starknet::get_caller_address;
+    use starknet::get_contract_address;
 
     #[storage]
     pub struct Storage {
@@ -45,18 +64,21 @@ pub mod AMM {
             assert(self.get_pool_balance(token_address) == 0, 'pool already exists');
 
             let caller: ContractAddress = get_caller_address();
+						let allowance = IERC20Dispatcher {contract_address: token_address}.allowance(caller, get_contract_address());
+						assert(allowance >= token_amount.into(), 'allowance should be >= deposit');
+						IERC20Dispatcher {contract_address: token_address}.transfer_from(caller, get_contract_address(), token_amount.into());
 
             self.pool_balance.write(token_address, token_amount);
             self.account_balance.write((caller, token_address), token_amount);
         }
 
-        fn swap(
-            ref self: ContractState,
-            input_token_address: ContractAddress,
-            input_token_amount: u128,
-            output_token_address: ContractAddress
-        ) {
-					assert(self.get_pool_balance(output_token_address) > 0, 'empty output pool');
-					}
+        // fn swap(
+        //     ref self: ContractState,
+        //     input_token_address: ContractAddress,
+        //     input_token_amount: u128,
+        //     output_token_address: ContractAddress
+        // ) {
+					// assert(self.get_pool_balance(output_token_address) > 0, 'empty output pool');
+					// }
     }
 }
