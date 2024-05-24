@@ -3,22 +3,27 @@ use amm::amm::{
     IAMM, AMM, IAMMDispatcher, IAMMSafeDispatcher, IAMMDispatcherTrait, IAMMSafeDispatcherTrait
 };
 use starknet::{ContractAddress, contract_address_const};
-use snforge_std::{declare, ContractClassTrait};
+use snforge_std::{
+    declare, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address
+};
 
-fn deploy_amm() -> (IAMMDispatcher, IAMMSafeDispatcher) {
+fn deploy_amm() -> (ContractAddress, (IAMMDispatcher, IAMMSafeDispatcher)) {
     let contract = declare("AMM").unwrap();
     let (contract_address, _) = contract.deploy(@array![]).unwrap();
 
     let dispatcher = IAMMDispatcher { contract_address };
     let safe_dispatcher = IAMMSafeDispatcher { contract_address };
 
-    (dispatcher, safe_dispatcher)
+    (contract_address, (dispatcher, safe_dispatcher))
 }
 
 #[test]
 #[feature("safe_dispatcher")]
 fn test_init_pool() {
-    let (dispatcher, safe_dispatcher) = deploy_amm();
+    let (contract_address, (dispatcher, safe_dispatcher)) = deploy_amm();
+    let account_address: ContractAddress = contract_address_const::<
+        0x06D98dC7ea54CF77eeD141F423f6007Dd61fbd2b6bD429Facdf5d4803353064f
+    >();
     let token_address: ContractAddress = contract_address_const::<
         0x06D98dC7ea54CF77eeD141F423f6007Dd61fbd2b6bD429Facdf5d4803353063f
     >();
@@ -26,9 +31,16 @@ fn test_init_pool() {
     let balance = dispatcher.get_pool_balance(token_address);
     assert(balance == 0, 'balance == 0');
 
+    start_cheat_caller_address(contract_address, account_address);
+    assert(dispatcher.get_account_balance(account_address, token_address) == 0, 'balance == 0');
+
     dispatcher.create_pool(token_address, 69420);
-    let balance = dispatcher.get_pool_balance(token_address);
-    assert(balance == 69420, 'balance == 69420');
+
+    assert(
+        dispatcher.get_account_balance(account_address, token_address) == 69420, 'balance == 69420'
+    );
+    assert(dispatcher.get_pool_balance(token_address) == 69420, 'balance == 69420');
+    stop_cheat_caller_address(contract_address);
 
     match safe_dispatcher.create_pool(token_address, 0) {
         Result::Ok(_) => panic_with_felt252('should have panicked'),
