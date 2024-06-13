@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
-trait IERC20<TContractState> {
+pub trait IERC20<TContractState> {
     fn name(self: @TContractState) -> felt252;
     fn symbol(self: @TContractState) -> felt252;
     fn decimals(self: @TContractState) -> u8;
@@ -27,6 +27,12 @@ pub trait IAMM<TContractState> {
     );
     fn withdraw_from_pool(
         ref self: TContractState, token_address: ContractAddress, token_amount: u128
+    );
+    fn swap(
+        ref self: TContractState,
+        input_token_address: ContractAddress,
+        input_token_amount: u128,
+        output_token_address: ContractAddress
     );
 }
 
@@ -107,6 +113,15 @@ pub mod AMM {
 
             self.pool_balance.write(token_address, pool_balance - token_amount);
             self.account_balance.write((caller, token_address), account_balance - token_amount);
+        }
+
+        fn swap(
+            ref self: ContractState,
+            input_token_address: ContractAddress,
+            input_token_amount: u128,
+            output_token_address: ContractAddress
+        ) {
+            assert(self.get_pool_balance(output_token_address) > 0, 'empty output pool');
         }
     }
 }
