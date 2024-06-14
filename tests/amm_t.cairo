@@ -72,18 +72,18 @@ fn test_init_pool() {
     assert(amm_dispatcher.get_pool_balance(token_contract_address) == 69420, 'balance == 69420');
 
     match amm_safe_dispatcher.create_pool(token_contract_address, 0) {
-    		Result::Ok(_) => panic_with_felt252('should have panicked'),
-    		Result::Err(panic_data) => {
-    				assert(*panic_data.at(0) == 'deposit amount has to be > 0', *panic_data.at(0));
-    		}
+        Result::Ok(_) => panic_with_felt252('should have panicked'),
+        Result::Err(panic_data) => {
+            assert(*panic_data.at(0) == 'deposit amount has to be > 0', *panic_data.at(0));
+        }
     }
 
     let _ = amm_safe_dispatcher.create_pool(token_contract_address, 69420);
     match amm_safe_dispatcher.create_pool(token_contract_address, 42) {
-    		Result::Ok(_) => panic_with_felt252('should have panicked'),
-    		Result::Err(panic_data) => {
-    				assert(*panic_data.at(0) == 'pool already exists', *panic_data.at(0));
-    		}
+        Result::Ok(_) => panic_with_felt252('should have panicked'),
+        Result::Err(panic_data) => {
+            assert(*panic_data.at(0) == 'pool already exists', *panic_data.at(0));
+        }
     }
 
     stop_cheat_caller_address(token_contract_address);

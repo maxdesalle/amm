@@ -90,7 +90,7 @@ pub mod AMM {
             } else {
                 let caller: ContractAddress = get_caller_address();
                 let allowance = IERC20Dispatcher { contract_address: token_address }
-                    .allowance(caller, get_contract_address());
+                    .allowance(caller, caller);
                 assert(allowance >= token_amount.into(), 'allowance should be >= deposit');
                 IERC20Dispatcher { contract_address: token_address }
                     .transfer_from(caller, get_contract_address(), token_amount.into());
