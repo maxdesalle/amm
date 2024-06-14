@@ -48,39 +48,44 @@ fn test_init_pool() {
     let account_address: ContractAddress = contract_address_const::<
         0x068803fa64609bfa0ebd8b92a8d0c7d91717e2c66f8871582ff9f2e8a1c4b25f
     >();
-    let (token_contract_address, (token_dispatcher, token_safe_dispatcher)) = deploy_token(
+    let (token_contract_address, (token_dispatcher, _)) = deploy_token(
         "test token", "TEST", 100000000000000000000000000, account_address
     );
 
-		let balance = amm_dispatcher.get_pool_balance(token_contract_address);
-		assert(balance == 0, 'balance == 0');
+    let balance = amm_dispatcher.get_pool_balance(token_contract_address);
+    assert(balance == 0, 'balance == 0');
 
-		start_cheat_caller_address(amm_contract_address, account_address);
-		start_cheat_caller_address(token_contract_address, account_address);
-		assert(amm_dispatcher.get_account_balance(account_address, token_contract_address) == 0, 'balance == 0');
+    start_cheat_caller_address(amm_contract_address, account_address);
+    start_cheat_caller_address(token_contract_address, account_address);
+    assert(
+        amm_dispatcher.get_account_balance(account_address, token_contract_address) == 0,
+        'balance == 0'
+    );
 
-		token_dispatcher.approve(amm_contract_address, 100000000000000000000000000);
-		amm_dispatcher.create_pool(token_contract_address, 69420);
+    token_dispatcher.approve(account_address, 100000000000000000000000000);
+    amm_dispatcher.create_pool(token_contract_address, 69420);
 
-		assert(
-				amm_dispatcher.get_account_balance(account_address, token_contract_address) == 69420, 'balance == 69420'
-		);
-		assert(amm_dispatcher.get_pool_balance(token_contract_address) == 69420, 'balance == 69420');
-		stop_cheat_caller_address(token_contract_address);
-		stop_cheat_caller_address(amm_contract_address);
+    assert(
+        amm_dispatcher.get_account_balance(account_address, token_contract_address) == 69420,
+        'balance == 69420'
+    );
+    assert(amm_dispatcher.get_pool_balance(token_contract_address) == 69420, 'balance == 69420');
 
-// match amm_safe_dispatcher.create_pool(token_address, 0) {
-//     Result::Ok(_) => panic_with_felt252('should have panicked'),
-//     Result::Err(panic_data) => {
-//         assert(*panic_data.at(0) == 'deposit amount has to be > 0', *panic_data.at(0));
-//     }
-// }
+    match amm_safe_dispatcher.create_pool(token_contract_address, 0) {
+    		Result::Ok(_) => panic_with_felt252('should have panicked'),
+    		Result::Err(panic_data) => {
+    				assert(*panic_data.at(0) == 'deposit amount has to be > 0', *panic_data.at(0));
+    		}
+    }
 
-// let _ = amm_safe_dispatcher.create_pool(token_address, 69420);
-// match amm_safe_dispatcher.create_pool(token_address, 42) {
-//     Result::Ok(_) => panic_with_felt252('should have panicked'),
-//     Result::Err(panic_data) => {
-//         assert(*panic_data.at(0) == 'pool already exists', *panic_data.at(0));
-//     }
-// }
+    let _ = amm_safe_dispatcher.create_pool(token_contract_address, 69420);
+    match amm_safe_dispatcher.create_pool(token_contract_address, 42) {
+    		Result::Ok(_) => panic_with_felt252('should have panicked'),
+    		Result::Err(panic_data) => {
+    				assert(*panic_data.at(0) == 'pool already exists', *panic_data.at(0));
+    		}
+    }
+
+    stop_cheat_caller_address(token_contract_address);
+    stop_cheat_caller_address(amm_contract_address);
 }
