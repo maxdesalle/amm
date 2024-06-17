@@ -114,7 +114,7 @@ fn test_pool_deposit() {
     start_cheat_caller_address(amm_contract_address, account_address);
     start_cheat_caller_address(token_contract_address, account_address);
 
-    token_dispatcher.approve(account_address, 100000000000000000000000000);
+    token_dispatcher.approve(account_address, 1000000000000000000000000000);
     amm_dispatcher.deposit_in_pool(token_contract_address, 69420);
 
     assert(
@@ -127,6 +127,13 @@ fn test_pool_deposit() {
         Result::Ok(_) => panic_with_felt252('should have panicked'),
         Result::Err(panic_data) => {
             assert(*panic_data.at(0) == 'deposit amount has to be > 0', *panic_data.at(0));
+        }
+    }
+
+    match amm_safe_dispatcher.deposit_in_pool(token_contract_address, 100000000000000000000000001) {
+        Result::Ok(_) => panic_with_felt252('should have panicked'),
+        Result::Err(panic_data) => {
+            assert(*panic_data.at(0) == 'balance should be >= deposit', *panic_data.at(0));
         }
     }
 
@@ -146,8 +153,8 @@ fn test_pool_withdraw() {
         "test token", "TEST", 100000000000000000000000000, account_address
     );
 
-    start_cheat_caller_address(amm_contract_address, account_address);
     start_cheat_caller_address(token_contract_address, account_address);
+    start_cheat_caller_address(amm_contract_address, account_address);
 
     token_dispatcher.approve(account_address, 100000000000000000000000000);
     amm_dispatcher.deposit_in_pool(token_contract_address, 69420);
@@ -156,25 +163,35 @@ fn test_pool_withdraw() {
         amm_dispatcher.get_account_balance(account_address, token_contract_address) == 69420,
         'balance == 69420'
     );
+    assert(
+        token_dispatcher.balance_of(account_address) == 99999999999999999999930580,
+        'balance == 9...930580'
+    );
     assert(amm_dispatcher.get_pool_balance(token_contract_address) == 69420, 'balance == 69420');
-		
-		amm_dispatcher.withdraw_from_pool(token_contract_address, 34710);
 
+    stop_cheat_caller_address(token_contract_address);
+    amm_dispatcher.withdraw_from_pool(token_contract_address, 34710);
+
+    assert(
+        token_dispatcher.balance_of(account_address) == 99999999999999999999965290,
+        'balance == 9...965290'
+    );
     assert(
         amm_dispatcher.get_account_balance(account_address, token_contract_address) == 34710,
         'balance == 34710'
     );
     assert(amm_dispatcher.get_pool_balance(token_contract_address) == 34710, 'balance == 34710');
 
-		amm_dispatcher.withdraw_from_pool(token_contract_address, 34710);
+    amm_dispatcher.withdraw_from_pool(token_contract_address, 34710);
 
+    assert(token_dispatcher.balance_of(account_address) == 100000000000000000000000000, 'balance == 10...0');
     assert(
         amm_dispatcher.get_account_balance(account_address, token_contract_address) == 0,
         'balance == 0'
     );
     assert(amm_dispatcher.get_pool_balance(token_contract_address) == 0, 'balance == 0');
 
-		amm_dispatcher.withdraw_from_pool(token_contract_address, 0);
+    amm_dispatcher.withdraw_from_pool(token_contract_address, 0);
     assert(
         amm_dispatcher.get_account_balance(account_address, token_contract_address) == 0,
         'balance == 0'
@@ -188,6 +205,5 @@ fn test_pool_withdraw() {
         }
     }
 
-    stop_cheat_caller_address(token_contract_address);
     stop_cheat_caller_address(amm_contract_address);
 }

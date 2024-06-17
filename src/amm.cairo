@@ -69,6 +69,8 @@ pub mod AMM {
             assert(self.get_pool_balance(token_address) == 0, 'pool already exists');
 
             let caller: ContractAddress = get_caller_address();
+            let balance = IERC20Dispatcher { contract_address: token_address }.balance_of(caller);
+            assert(balance >= token_amount.into(), 'balance should be >= deposit');
             let allowance = IERC20Dispatcher { contract_address: token_address }
                 .allowance(caller, caller);
             assert(allowance >= token_amount.into(), 'allowance should be >= deposit');
@@ -89,6 +91,9 @@ pub mod AMM {
                 self.create_pool(token_address, token_amount);
             } else {
                 let caller: ContractAddress = get_caller_address();
+                let balance = IERC20Dispatcher { contract_address: token_address }
+                    .balance_of(caller);
+                assert(balance >= token_amount.into(), 'balance should be >= deposit');
                 let allowance = IERC20Dispatcher { contract_address: token_address }
                     .allowance(caller, caller);
                 assert(allowance >= token_amount.into(), 'allowance should be >= deposit');
