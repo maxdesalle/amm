@@ -184,7 +184,10 @@ fn test_pool_withdraw() {
 
     amm_dispatcher.withdraw_from_pool(token_contract_address, 34710);
 
-    assert(token_dispatcher.balance_of(account_address) == 100000000000000000000000000, 'balance == 10...0');
+    assert(
+        token_dispatcher.balance_of(account_address) == 100000000000000000000000000,
+        'balance == 10...0'
+    );
     assert(
         amm_dispatcher.get_account_balance(account_address, token_contract_address) == 0,
         'balance == 0'
