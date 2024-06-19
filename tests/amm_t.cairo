@@ -49,7 +49,7 @@ fn test_init_pool() {
         0x068803fa64609bfa0ebd8b92a8d0c7d91717e2c66f8871582ff9f2e8a1c4b25f
     >();
     let (token_contract_address, (token_dispatcher, _)) = deploy_token(
-        "test token", "TEST", 100000000000000000000000000, account_address
+        "test token", "TEST", 100000000000000000000000000000000000000000000, account_address
     );
 
     let balance = amm_dispatcher.get_pool_balance(token_contract_address);
@@ -63,14 +63,20 @@ fn test_init_pool() {
     start_cheat_caller_address(amm_contract_address, account_address);
     start_cheat_caller_address(token_contract_address, account_address);
 
-    token_dispatcher.approve(account_address, 100000000000000000000000000);
-    amm_dispatcher.create_pool(token_contract_address, 69420);
+    token_dispatcher.approve(account_address, 10000000000000000000000000000000000000000000);
+    amm_dispatcher.create_pool(token_contract_address, 69420000000000000000000);
 
     assert(
-        amm_dispatcher.get_account_balance(account_address, token_contract_address) == 69420,
+        amm_dispatcher
+            .get_account_balance(
+                account_address, token_contract_address
+            ) == 69420000000000000000000,
         'balance == 69420'
     );
-    assert(amm_dispatcher.get_pool_balance(token_contract_address) == 69420, 'balance == 69420');
+    assert(
+        amm_dispatcher.get_pool_balance(token_contract_address) == 69420000000000000000000,
+        'balance == 69420'
+    );
 
     match amm_safe_dispatcher.create_pool(token_contract_address, 0) {
         Result::Ok(_) => panic_with_felt252('should have panicked'),
@@ -79,8 +85,8 @@ fn test_init_pool() {
         }
     }
 
-    let _ = amm_safe_dispatcher.create_pool(token_contract_address, 69420);
-    match amm_safe_dispatcher.create_pool(token_contract_address, 42) {
+    let _ = amm_safe_dispatcher.create_pool(token_contract_address, 69420000000000000000000);
+    match amm_safe_dispatcher.create_pool(token_contract_address, 420000000000000000000) {
         Result::Ok(_) => panic_with_felt252('should have panicked'),
         Result::Err(panic_data) => {
             assert(*panic_data.at(0) == 'pool already exists', *panic_data.at(0));
@@ -100,7 +106,7 @@ fn test_pool_deposit() {
         0x068803fa64609bfa0ebd8b92a8d0c7d91717e2c66f8871582ff9f2e8a1c4b25f
     >();
     let (token_contract_address, (token_dispatcher, _)) = deploy_token(
-        "test token", "TEST", 100000000000000000000000000, account_address
+        "test token", "TEST", 100000000000000000000000000000000000000000000, account_address
     );
 
     let balance = amm_dispatcher.get_pool_balance(token_contract_address);
@@ -114,14 +120,20 @@ fn test_pool_deposit() {
     start_cheat_caller_address(amm_contract_address, account_address);
     start_cheat_caller_address(token_contract_address, account_address);
 
-    token_dispatcher.approve(account_address, 1000000000000000000000000000);
-    amm_dispatcher.deposit_in_pool(token_contract_address, 69420);
+    token_dispatcher.approve(account_address, 10000000000000000000000000000000000000000000);
+    amm_dispatcher.deposit_in_pool(token_contract_address, 69420000000000000000000);
 
     assert(
-        amm_dispatcher.get_account_balance(account_address, token_contract_address) == 69420,
+        amm_dispatcher
+            .get_account_balance(
+                account_address, token_contract_address
+            ) == 69420000000000000000000,
         'balance == 69420'
     );
-    assert(amm_dispatcher.get_pool_balance(token_contract_address) == 69420, 'balance == 69420');
+    assert(
+        amm_dispatcher.get_pool_balance(token_contract_address) == 69420000000000000000000,
+        'balance == 69420'
+    );
 
     match amm_safe_dispatcher.deposit_in_pool(token_contract_address, 0) {
         Result::Ok(_) => panic_with_felt252('should have panicked'),
@@ -130,7 +142,8 @@ fn test_pool_deposit() {
         }
     }
 
-    match amm_safe_dispatcher.deposit_in_pool(token_contract_address, 100000000000000000000000001) {
+    match amm_safe_dispatcher
+        .deposit_in_pool(token_contract_address, 100000000000000000000000000000000000000000001) {
         Result::Ok(_) => panic_with_felt252('should have panicked'),
         Result::Err(panic_data) => {
             assert(*panic_data.at(0) == 'balance should be >= deposit', *panic_data.at(0));
@@ -150,42 +163,57 @@ fn test_pool_withdraw() {
         0x068803fa64609bfa0ebd8b92a8d0c7d91717e2c66f8871582ff9f2e8a1c4b25f
     >();
     let (token_contract_address, (token_dispatcher, _)) = deploy_token(
-        "test token", "TEST", 100000000000000000000000000, account_address
+        "test token", "TEST", 100000000000000000000000000000000000000000000, account_address
     );
 
     start_cheat_caller_address(token_contract_address, account_address);
     start_cheat_caller_address(amm_contract_address, account_address);
 
-    token_dispatcher.approve(account_address, 100000000000000000000000000);
-    amm_dispatcher.deposit_in_pool(token_contract_address, 69420);
+    token_dispatcher.approve(account_address, 10000000000000000000000000000000000000000000);
+    amm_dispatcher.deposit_in_pool(token_contract_address, 69420000000000000000000);
 
     assert(
-        amm_dispatcher.get_account_balance(account_address, token_contract_address) == 69420,
+        amm_dispatcher
+            .get_account_balance(
+                account_address, token_contract_address
+            ) == 69420000000000000000000,
         'balance == 69420'
     );
     assert(
-        token_dispatcher.balance_of(account_address) == 99999999999999999999930580,
+        token_dispatcher
+            .balance_of(account_address) == 99999999999999999999930580000000000000000000,
         'balance == 9...930580'
     );
-    assert(amm_dispatcher.get_pool_balance(token_contract_address) == 69420, 'balance == 69420');
+    assert(
+        amm_dispatcher.get_pool_balance(token_contract_address) == 69420000000000000000000,
+        'balance == 69420'
+    );
 
     stop_cheat_caller_address(token_contract_address);
-    amm_dispatcher.withdraw_from_pool(token_contract_address, 34710);
+    amm_dispatcher.withdraw_from_pool(token_contract_address, 34710000000000000000000);
 
     assert(
-        token_dispatcher.balance_of(account_address) == 99999999999999999999965290,
+        token_dispatcher
+            .balance_of(account_address) == 99999999999999999999965290000000000000000000,
         'balance == 9...965290'
     );
     assert(
-        amm_dispatcher.get_account_balance(account_address, token_contract_address) == 34710,
+        amm_dispatcher
+            .get_account_balance(
+                account_address, token_contract_address
+            ) == 34710000000000000000000,
         'balance == 34710'
     );
-    assert(amm_dispatcher.get_pool_balance(token_contract_address) == 34710, 'balance == 34710');
+    assert(
+        amm_dispatcher.get_pool_balance(token_contract_address) == 34710000000000000000000,
+        'balance == 34710'
+    );
 
-    amm_dispatcher.withdraw_from_pool(token_contract_address, 34710);
+    amm_dispatcher.withdraw_from_pool(token_contract_address, 34710000000000000000000);
 
     assert(
-        token_dispatcher.balance_of(account_address) == 100000000000000000000000000,
+        token_dispatcher
+            .balance_of(account_address) == 100000000000000000000000000000000000000000000,
         'balance == 10...0'
     );
     assert(
@@ -201,7 +229,7 @@ fn test_pool_withdraw() {
     );
     assert(amm_dispatcher.get_pool_balance(token_contract_address) == 0, 'balance == 0');
 
-    match amm_safe_dispatcher.withdraw_from_pool(token_contract_address, 420) {
+    match amm_safe_dispatcher.withdraw_from_pool(token_contract_address, 420000000000000000000) {
         Result::Ok(_) => panic_with_felt252('should have panicked'),
         Result::Err(panic_data) => {
             assert(*panic_data.at(0) == 'cannot withdraw >= balance', *panic_data.at(0));

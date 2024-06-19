@@ -19,21 +19,21 @@ pub trait IERC20<TContractState> {
 #[starknet::interface]
 pub trait IAMM<TContractState> {
     fn address_in_owner_list(self: @TContractState, token_address: ContractAddress) -> bool;
-    fn get_pool_balance(self: @TContractState, token_address: ContractAddress) -> u128;
+    fn get_pool_balance(self: @TContractState, token_address: ContractAddress) -> u256;
     fn get_account_balance(
         self: @TContractState, account_address: ContractAddress, token_address: ContractAddress
-    ) -> u128;
-    fn create_pool(ref self: TContractState, token_address: ContractAddress, token_amount: u128);
+    ) -> u256;
+    fn create_pool(ref self: TContractState, token_address: ContractAddress, token_amount: u256);
     fn deposit_in_pool(
-        ref self: TContractState, token_address: ContractAddress, token_amount: u128
+        ref self: TContractState, token_address: ContractAddress, token_amount: u256
     );
     fn withdraw_from_pool(
-        ref self: TContractState, token_address: ContractAddress, token_amount: u128
+        ref self: TContractState, token_address: ContractAddress, token_amount: u256
     );
     fn swap(
         ref self: TContractState,
         input_token_address: ContractAddress,
-        input_token_amount: u128,
+        input_token_amount: u256,
         output_token_address: ContractAddress
     );
 }
@@ -46,12 +46,13 @@ pub mod AMM {
     use starknet::get_caller_address;
     use starknet::get_contract_address;
     use alexandria_storage::list::{List, ListTrait};
+    use alexandria_math::wad_ray_math::{wad, wad_mul, wad_div};
 
     #[storage]
     pub struct Storage {
-        account_balance: LegacyMap::<(ContractAddress, ContractAddress), u128>,
+        account_balance: LegacyMap::<(ContractAddress, ContractAddress), u256>,
         pool_owners: LegacyMap::<ContractAddress, List<ContractAddress>>,
-        pool_balance: LegacyMap::<ContractAddress, u128>
+        pool_balance: LegacyMap::<ContractAddress, u256>
     }
 
     #[generate_trait]
@@ -88,19 +89,19 @@ pub mod AMM {
             }
 
             if i == 0 {
-                owners.pop_front().unwrap();
+                let _ = owners.pop_front().unwrap();
                 return;
             }
 
             let mut j = i - 1;
 
             while j >= 0 {
-                owners.set(i, owners.get(j).unwrap().unwrap());
+                let _ = owners.set(i, owners.get(j).unwrap().unwrap());
                 j -= 1;
                 i -= 1;
             };
 
-            owners.pop_front().unwrap();
+            let _ = owners.pop_front().unwrap();
         }
     }
 
@@ -123,30 +124,30 @@ pub mod AMM {
             return result;
         }
 
-        fn get_pool_balance(self: @ContractState, token_address: ContractAddress) -> u128 {
+        fn get_pool_balance(self: @ContractState, token_address: ContractAddress) -> u256 {
             self.pool_balance.read(token_address)
         }
 
         fn get_account_balance(
             self: @ContractState, account_address: ContractAddress, token_address: ContractAddress
-        ) -> u128 {
+        ) -> u256 {
             self.account_balance.read((account_address, token_address))
         }
 
         fn create_pool(
-            ref self: ContractState, token_address: ContractAddress, token_amount: u128
+            ref self: ContractState, token_address: ContractAddress, token_amount: u256
         ) {
             assert(token_amount > 0, 'deposit amount has to be > 0');
             assert(self.get_pool_balance(token_address) == 0, 'pool already exists');
 
             let caller: ContractAddress = get_caller_address();
             let balance = IERC20Dispatcher { contract_address: token_address }.balance_of(caller);
-            assert(balance >= token_amount.into(), 'balance should be >= deposit');
+            assert(balance >= token_amount, 'balance should be >= deposit');
             let allowance = IERC20Dispatcher { contract_address: token_address }
                 .allowance(caller, caller);
-            assert(allowance >= token_amount.into(), 'allowance should be >= deposit');
+            assert(allowance >= token_amount, 'allowance should be >= deposit');
             IERC20Dispatcher { contract_address: token_address }
-                .transfer_from(caller, get_contract_address(), token_amount.into());
+                .transfer_from(caller, get_contract_address(), token_amount);
 
             self.pool_balance.write(token_address, token_amount);
             let mut owners = self.pool_owners.read(token_address);
@@ -155,7 +156,7 @@ pub mod AMM {
         }
 
         fn deposit_in_pool(
-            ref self: ContractState, token_address: ContractAddress, token_amount: u128
+            ref self: ContractState, token_address: ContractAddress, token_amount: u256
         ) {
             assert(token_amount > 0, 'deposit amount has to be > 0');
             let pool_balance = self.get_pool_balance(token_address);
@@ -166,12 +167,12 @@ pub mod AMM {
                 let caller: ContractAddress = get_caller_address();
                 let balance = IERC20Dispatcher { contract_address: token_address }
                     .balance_of(caller);
-                assert(balance >= token_amount.into(), 'balance should be >= deposit');
+                assert(balance >= token_amount, 'balance should be >= deposit');
                 let allowance = IERC20Dispatcher { contract_address: token_address }
                     .allowance(caller, caller);
-                assert(allowance >= token_amount.into(), 'allowance should be >= deposit');
+                assert(allowance >= token_amount, 'allowance should be >= deposit');
                 IERC20Dispatcher { contract_address: token_address }
-                    .transfer_from(caller, get_contract_address(), token_amount.into());
+                    .transfer_from(caller, get_contract_address(), token_amount);
                 let account_balance = self.get_account_balance(caller, token_address);
                 self.pool_balance.write(token_address, pool_balance + token_amount);
                 if self.address_in_owner_list(token_address) == false {
@@ -183,15 +184,14 @@ pub mod AMM {
         }
 
         fn withdraw_from_pool(
-            ref self: ContractState, token_address: ContractAddress, token_amount: u128
+            ref self: ContractState, token_address: ContractAddress, token_amount: u256
         ) {
             let caller: ContractAddress = get_caller_address();
             let account_balance = self.get_account_balance(caller, token_address);
             assert(account_balance >= token_amount, 'cannot withdraw >= balance');
             let pool_balance = self.get_pool_balance(token_address);
 
-            IERC20Dispatcher { contract_address: token_address }
-                .transfer(caller, token_amount.into());
+            IERC20Dispatcher { contract_address: token_address }.transfer(caller, token_amount);
 
             self.pool_balance.write(token_address, pool_balance - token_amount);
             if account_balance - token_amount == 0 {
@@ -203,24 +203,74 @@ pub mod AMM {
         fn swap(
             ref self: ContractState,
             input_token_address: ContractAddress,
-            input_token_amount: u128,
+            input_token_amount: u256,
             output_token_address: ContractAddress
         ) {
+            let caller: ContractAddress = get_caller_address();
             assert(self.get_pool_balance(output_token_address) > 0, 'empty output pool');
-        // let balance = IERC20Dispatcher { contract_address: token_address }
-        // 		.balance_of(caller);
-        // assert(balance >= token_amount.into(), 'balance should be >= deposit');
-        // let allowance = IERC20Dispatcher { contract_address: token_address }
-        // 		.allowance(caller, caller);
-        // assert(allowance >= token_amount.into(), 'allowance should be >= deposit');
-        // IERC20Dispatcher { contract_address: token_address }
-        // 		.transfer_from(caller, get_contract_address(), token_amount.into());
+            let balance = IERC20Dispatcher { contract_address: input_token_address }
+                .balance_of(caller);
+            assert(balance >= input_token_amount, 'balance should be >= deposit');
+            let allowance = IERC20Dispatcher { contract_address: input_token_address }
+                .allowance(caller, caller);
+            assert(allowance >= input_token_amount, 'allowance should be >= deposit');
 
-        // let input_token_pool_balance = self.get_pool_balance(input_token_address);
-        // let output_token_pool_balance = self.get_pool_balance(output_token_address);
-        // let output_token_amount = (input_token_amount + output_token_pool_balance) / (input_token_pool_balance + input_token_amount);
-        // self.pool_balance.write(input_token_address, input_token_pool_balance + input_token_amount);
-        // self.pool_balance.write(output_token_address, output_token_pool_balance - output_token_amount);
+            let input_token_pool_balance = self.get_pool_balance(input_token_address);
+            let output_token_pool_balance = self.get_pool_balance(output_token_address);
+            let output_token_amount = (input_token_amount + output_token_pool_balance)
+                / (input_token_pool_balance + input_token_amount);
+
+            let pool_reduction_factor = wad_div(
+                (output_token_pool_balance - output_token_amount) - output_token_pool_balance,
+                output_token_pool_balance
+            );
+
+            let mut i: u32 = 0;
+            let len = self.pool_owners.read(output_token_address).len();
+
+            loop {
+                if i == len {
+                    break;
+                }
+                let old_output_balance = self
+                    .account_balance
+                    .read((self.pool_owners.read(output_token_address)[i], output_token_address));
+                let new_output_balance = old_output_balance
+                    - wad_mul(old_output_balance, pool_reduction_factor);
+                let owner = self.pool_owners.read(output_token_address)[i];
+
+                self.account_balance.write((owner, output_token_address), new_output_balance);
+                if new_output_balance == 0 {
+                    self.remove_list_element(output_token_address, owner);
+                }
+
+                let new_pool_share_factor = wad_div(
+                    old_output_balance, self.get_pool_balance(output_token_address)
+                );
+                let new_input_balance = wad_mul(new_pool_share_factor, input_token_amount)
+                    + self.account_balance.read((owner, input_token_address));
+
+                if self.address_in_owner_list(input_token_address) == false {
+                    let mut pool_owners = self.pool_owners.read(input_token_address);
+                    let _ = pool_owners.append(owner);
+                }
+
+                self.account_balance.write((owner, input_token_address), new_input_balance);
+                i += 1;
+            };
+
+            self
+                .pool_balance
+                .write(input_token_address, input_token_pool_balance + input_token_amount);
+            self
+                .pool_balance
+                .write(output_token_address, output_token_pool_balance - output_token_amount);
+
+            IERC20Dispatcher { contract_address: input_token_address }
+                .transfer_from(caller, get_contract_address(), input_token_amount);
+
+            IERC20Dispatcher { contract_address: output_token_address }
+                .transfer(caller, output_token_amount);
         }
     }
 }
