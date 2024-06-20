@@ -7,7 +7,7 @@ use starknet::{ContractAddress, contract_address_const};
 use openzeppelin::presets::ERC20Upgradeable;
 use openzeppelin::utils::serde::SerializedAppend;
 use snforge_std::{
-    declare, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address
+    declare, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address, ContractClass
 };
 
 fn deploy_amm() -> (ContractAddress, (IAMMDispatcher, IAMMSafeDispatcher)) {
@@ -22,7 +22,7 @@ fn deploy_amm() -> (ContractAddress, (IAMMDispatcher, IAMMSafeDispatcher)) {
 
 fn deploy_token(
     name: ByteArray, symbol: ByteArray, initial_supply: u256, recipient: ContractAddress
-) -> (ContractAddress, (IERC20Dispatcher, IERC20SafeDispatcher)) {
+) -> (ContractAddress, (IERC20Dispatcher, ContractClass)) {
     let mut calldata = array![];
 
     name.serialize(ref calldata);
@@ -35,9 +35,8 @@ fn deploy_token(
     let contract = declare("ERC20Upgradeable").unwrap();
     let (contract_address, _) = contract.deploy(@calldata).unwrap();
     let dispatcher = IERC20Dispatcher { contract_address };
-    let safe_dispatcher = IERC20SafeDispatcher { contract_address };
 
-    (contract_address, (dispatcher, safe_dispatcher))
+    (contract_address, (dispatcher, contract))
 }
 
 #[test]
@@ -236,5 +235,52 @@ fn test_pool_withdraw() {
         }
     }
 
+    stop_cheat_caller_address(amm_contract_address);
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_swap() {
+    let (amm_contract_address, (amm_dispatcher, _amm_safe_dispatcher)) = deploy_amm();
+    // random account address
+    let account_address: ContractAddress = contract_address_const::<
+        0x068803fa64609bfa0ebd8b92a8d0c7d91717e2c66f8871582ff9f2e8a1c4b25f
+    >();
+    let (token_contract_address, (token_dispatcher, contract)) = deploy_token(
+        "test token", "TEST", 1000000000000000000000000000000000000000000000000, account_address
+    );
+
+		let name: ByteArray = "swap test token";
+		let symbol: ByteArray = "SWAPTEST";
+		let initial_supply: u256 = 1000000000000000000000000000000000000000000000000;
+
+    let mut calldata = array![];
+
+    name.serialize(ref calldata);
+    // calldata.append_serde(name);
+    calldata.append_serde(symbol);
+    calldata.append_serde(initial_supply);
+    calldata.append_serde(account_address);
+    calldata.append_serde(account_address);
+
+    let (swap_contract_address, _) = contract.deploy(@calldata).unwrap();
+    let swap_token_dispatcher = IERC20Dispatcher { contract_address: swap_contract_address };
+
+    start_cheat_caller_address(token_contract_address, account_address);
+    start_cheat_caller_address(swap_contract_address, account_address);
+    start_cheat_caller_address(amm_contract_address, account_address);
+
+    token_dispatcher.approve(account_address, 1000000000000000000000000000000000000000000000000000);
+    swap_token_dispatcher.approve(account_address, 10000000000000000000000000000000000000000000000000000);
+    amm_dispatcher.deposit_in_pool(token_contract_address, 694200000000000000000000000000000);
+    amm_dispatcher.deposit_in_pool(swap_contract_address, 694200000000000000000000000000000);
+    stop_cheat_caller_address(token_contract_address);
+    amm_dispatcher.swap(swap_contract_address, 1243242000000000000000000, token_contract_address);
+    assert(
+        token_dispatcher
+            .balance_of(account_address) > 999999999305800000000000000000000000000000000000,
+        'balance  9999930580...'
+    );
+    stop_cheat_caller_address(swap_contract_address);
     stop_cheat_caller_address(amm_contract_address);
 }

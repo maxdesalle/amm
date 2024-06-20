@@ -215,13 +215,13 @@ pub mod AMM {
                 .allowance(caller, caller);
             assert(allowance >= input_token_amount, 'allowance should be >= deposit');
 
+
             let input_token_pool_balance = self.get_pool_balance(input_token_address);
             let output_token_pool_balance = self.get_pool_balance(output_token_address);
-            let output_token_amount = (input_token_amount + output_token_pool_balance)
-                / (input_token_pool_balance + input_token_amount);
+            let output_token_amount = wad_div(wad_mul(input_token_amount, output_token_pool_balance), input_token_pool_balance + input_token_amount);
 
             let pool_reduction_factor = wad_div(
-                (output_token_pool_balance - output_token_amount) - output_token_pool_balance,
+                (output_token_pool_balance - output_token_amount),
                 output_token_pool_balance
             );
 
@@ -235,8 +235,7 @@ pub mod AMM {
                 let old_output_balance = self
                     .account_balance
                     .read((self.pool_owners.read(output_token_address)[i], output_token_address));
-                let new_output_balance = old_output_balance
-                    - wad_mul(old_output_balance, pool_reduction_factor);
+                let new_output_balance = wad_mul(old_output_balance, pool_reduction_factor);
                 let owner = self.pool_owners.read(output_token_address)[i];
 
                 self.account_balance.write((owner, output_token_address), new_output_balance);
