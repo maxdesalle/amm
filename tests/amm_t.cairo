@@ -7,7 +7,8 @@ use starknet::{ContractAddress, contract_address_const};
 use openzeppelin::presets::ERC20Upgradeable;
 use openzeppelin::utils::serde::SerializedAppend;
 use snforge_std::{
-    declare, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address, ContractClass
+    declare, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address,
+    ContractClass
 };
 
 fn deploy_amm() -> (ContractAddress, (IAMMDispatcher, IAMMSafeDispatcher)) {
@@ -250,9 +251,9 @@ fn test_swap() {
         "test token", "TEST", 1000000000000000000000000000000000000000000000000, account_address
     );
 
-		let name: ByteArray = "swap test token";
-		let symbol: ByteArray = "SWAPTEST";
-		let initial_supply: u256 = 1000000000000000000000000000000000000000000000000;
+    let name: ByteArray = "swap test token";
+    let symbol: ByteArray = "SWAPTEST";
+    let initial_supply: u256 = 1000000000000000000000000000000000000000000000000;
 
     let mut calldata = array![];
 
@@ -271,7 +272,8 @@ fn test_swap() {
     start_cheat_caller_address(amm_contract_address, account_address);
 
     token_dispatcher.approve(account_address, 1000000000000000000000000000000000000000000000000000);
-    swap_token_dispatcher.approve(account_address, 10000000000000000000000000000000000000000000000000000);
+    swap_token_dispatcher
+        .approve(account_address, 10000000000000000000000000000000000000000000000000000);
     amm_dispatcher.deposit_in_pool(token_contract_address, 694200000000000000000000000000000);
     amm_dispatcher.deposit_in_pool(swap_contract_address, 694200000000000000000000000000000);
     stop_cheat_caller_address(token_contract_address);

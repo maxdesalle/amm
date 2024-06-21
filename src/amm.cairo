@@ -42,9 +42,7 @@ pub trait IAMM<TContractState> {
 pub mod AMM {
     use super::IERC20Dispatcher;
     use super::IERC20DispatcherTrait;
-    use starknet::ContractAddress;
-    use starknet::get_caller_address;
-    use starknet::get_contract_address;
+		use starknet::{ContractAddress, contract_address_const,get_caller_address,get_contract_address};
     use alexandria_storage::list::{List, ListTrait};
     use alexandria_math::wad_ray_math::{wad, wad_mul, wad_div};
 
@@ -137,10 +135,16 @@ pub mod AMM {
         fn create_pool(
             ref self: ContractState, token_address: ContractAddress, token_amount: u256
         ) {
+            let caller: ContractAddress = get_caller_address();
+            assert(
+                caller == contract_address_const::<
+                    0x068803fa64609bfa0ebd8b92a8d0c7d91717e2c66f8871582ff9f2e8a1c4b25f
+                >(),
+                'only deployer can call this'
+            );
             assert(token_amount > 0, 'deposit amount has to be > 0');
             assert(self.get_pool_balance(token_address) == 0, 'pool already exists');
 
-            let caller: ContractAddress = get_caller_address();
             let balance = IERC20Dispatcher { contract_address: token_address }.balance_of(caller);
             assert(balance >= token_amount, 'balance should be >= deposit');
             let allowance = IERC20Dispatcher { contract_address: token_address }
@@ -215,14 +219,15 @@ pub mod AMM {
                 .allowance(caller, caller);
             assert(allowance >= input_token_amount, 'allowance should be >= deposit');
 
-
             let input_token_pool_balance = self.get_pool_balance(input_token_address);
             let output_token_pool_balance = self.get_pool_balance(output_token_address);
-            let output_token_amount = wad_div(wad_mul(input_token_amount, output_token_pool_balance), input_token_pool_balance + input_token_amount);
+            let output_token_amount = wad_div(
+                wad_mul(input_token_amount, output_token_pool_balance),
+                input_token_pool_balance + input_token_amount
+            );
 
             let pool_reduction_factor = wad_div(
-                (output_token_pool_balance - output_token_amount),
-                output_token_pool_balance
+                (output_token_pool_balance - output_token_amount), output_token_pool_balance
             );
 
             let mut i: u32 = 0;

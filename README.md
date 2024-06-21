@@ -1,6 +1,6 @@
 # AMM
 
-A simple AMM for Starknet.
+A simple AMM for Starknet. You probably don't want to use this in production.
 
 
 ## License
